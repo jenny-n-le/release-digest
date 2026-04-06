@@ -1,0 +1,152 @@
+Vibe Code Instructions: Export Slide-Out Drawer
+Goal
+
+Remove the persistent “Export Options” right-side panel. Replace it with an Export button in the header that opens a right-side slide-over drawer. This keeps the digest layout focused on releases while keeping export fast and in-context.
+
+UI Changes
+1) Remove Static Export Panel
+
+Delete the fixed right column “Export Options” panel from the main digest layout.
+
+The main digest should become full-width (or use that space for release content).
+
+Header: Add Export Button
+Placement
+
+Add an Export button in the top header bar.
+
+Place it to the right of the Date Range selector (calendar/date control), aligned in the top-right cluster.
+
+Styling
+
+Use a secondary button style (outline or neutral, not the primary accent color).
+
+Include an icon + label if available (optional).
+
+Keep the same height as other header controls.
+
+Behavior
+
+Clicking Export opens a slide-over drawer from the right.
+
+The page does not navigate.
+
+Export Drawer (Right Slide-Over)
+Open State
+
+Drawer overlays the digest view.
+
+The digest remains visible behind it (dimmed overlay).
+
+Drawer width:
+
+Desktop: ~360–420px
+
+Responsive: near full-width on mobile
+
+Drawer Header
+
+Title: Export
+
+Subtext (recommended): Feb 9 – Feb 15 (use the currently selected date range)
+
+Close controls:
+
+Top-right X
+
+ESC key closes
+
+Clicking the dimmed overlay closes (optional but recommended)
+
+Drawer Content
+
+Include the same export functionality currently in the right panel:
+
+Export Target Toggle
+
+Tabs or segmented control:
+
+Slack | Email
+
+Generated Preview
+
+A scrollable preview panel of the formatted output
+
+Should update when:
+
+Date range changes
+
+Status filter changes
+
+Tier filters change
+
+Primary Action
+
+Button: Copy for Slack or Copy for Email (based on tab)
+
+On click:
+
+Copy the generated text to clipboard
+
+Show a small confirmation toast: “Copied!”
+
+Secondary Actions (Optional)
+
+Regenerate (only if generation can fail or is async)
+
+Download .txt (optional, later)
+
+Pro Tip / Validation Message (Optional)
+
+Keep your existing “verify links” tip as a small info card inside the drawer.
+
+State + UX Requirements
+Preserve User Context
+
+Opening/closing the Export drawer should not:
+
+Reset scroll position
+
+Reset filters
+
+Collapse product sections
+
+Closing returns user to the exact digest state.
+
+Keyboard + Accessibility
+
+ESC closes drawer
+
+Focus should move into the drawer when opened
+
+Focus returns to the Export button when closed
+
+Drawer vs Release Detail Drawer
+
+If you also have a release detail drawer:
+
+Only one drawer should be open at a time.
+
+If a release detail drawer is open and user clicks Export:
+
+Close release drawer, then open export drawer (or vice versa, choose one rule and keep consistent).
+
+Data Scope Rules (Very Important)
+
+The export output should reflect the current view state, including:
+
+Selected date range
+
+Status filter (All Statuses, etc.)
+
+Tier filters (All, Tier 0–3, Untiered)
+
+Expanded/collapsed product groups should not matter (export includes all matching releases in the filtered set)
+
+Empty States
+
+If no releases match filters:
+
+Preview shows: “No releases to export for this selection.”
+
+Copy button disabled

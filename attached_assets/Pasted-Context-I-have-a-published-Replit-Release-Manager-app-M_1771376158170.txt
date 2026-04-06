@@ -1,0 +1,86 @@
+Context:
+I have a published Replit “Release Manager” app. My source of truth is a Notion database called “Release Notes”.
+I want the app (EPD module → Releases page) to pull releases from Notion and display them in the table UI.
+
+Important constraint:
+Notion updates should appear after a new row has BOTH “Release Date” and “Release Name” populated.
+If Notion cannot push events natively, implement polling-based sync as Phase 3 (no external services required).
+
+Screens I attached show:
+- Replit UI table columns: Release | Category | Status | Tier | Date | Owner
+- Notion database columns: Release Status | Release Date | Release Name | Product | Brief Description | Release Tier | Knowledge Article Link | Owner of Feature
+
+Mapping rules:
+- Replit.Release = Notion.“Release Name” (title)
+- Replit.Date = Notion.“Release Date” (date)
+- Replit.Status = Notion.“Release Status” (status)
+- Replit.Category = Notion.“Product” (multi-select). Display as:
+   - if multi-select has 1+ values, use the first value as “Category”
+   - also keep an array for filtering if needed
+- Replit.Tier = Notion.“Release Tier” (select). The Notion value includes text like “Tier 3 Small Release” or “Tier 2 Medium Release”.
+   - normalize to: “Tier 0”, “Tier 1”, “Tier 2”, “Tier 3”, or “Untiered”
+- Replit.Owner = Notion.“Owner of Feature” (people). Display the first person’s name.
+
+Filtering rule:
+Only include rows where Release Name and Release Date are both present.
+
+PHASE 0: Inspect the existing codebase and tell me what stack it is (Next.js, Vite+React, Node/Express, Python, etc). Use the existing stack if possible instead of adding a second server.
+
+PHASE 1: Implement the backend API framework
+- Add server endpoints for Notion integration.
+- Use env vars (Secrets):
+   NOTION_TOKEN
+   NOTION_DATABASE_ID
+- Confirm this works in the published deployment environment too (deployment env vars).
+- Implement GET /api/health -> { ok: true }
+- Implement GET /api/releases -> returns:
+  {
+    "releases": [
+      {
+        "id": "...",
+        "name": "...",
+        "category": "...",
+        "categories": ["..."],
+        "status": "...",
+        "tier": "Tier 2",
+        "date": "YYYY-MM-DD",
+        "owner": "...",
+        "notionUrl": "..."
+      }
+    ]
+  }
+
+Framework guidance:
+If FastAPI is not the best choice for THIS codebase, recommend the best option and implement that instead.
+Preference: do not introduce a second runtime unless necessary. If this is already a Node app, add routes in Node. If it’s already Python, use FastAPI.
+
+PHASE 2: Prove the connection works (GET + POST)
+- Add POST /api/releases that creates a new row in Notion with at least:
+   Release Name, Release Date, Release Status, Product, Release Tier, Owner of Feature (optional if hard)
+- Add a simple test script or instructions to run:
+   - curl GET /api/releases
+   - curl POST /api/releases
+- Log safe debug output (never print NOTION_TOKEN).
+
+PHASE 3: Make new Notion rows appear in Replit UI (EPD → Releases)
+Because Notion cannot push events reliably, implement one of these:
+Option A (preferred): polling-based refresh
+- Frontend polls GET /api/releases every 30–60 seconds OR has a “Refresh” button.
+- UI updates the table with new releases.
+
+Option B: server-side polling cache
+- Add a server job that re-queries Notion every minute and caches results in memory.
+- GET /api/releases returns the cached results.
+
+Implement whichever fits the Replit deployment environment best.
+
+UI integration:
+- Update the EPD → Releases page to fetch /api/releases instead of mock data.
+- Ensure the table columns render correctly and match the mapping rules.
+- Ensure the Status pill styles remain, but values come from Notion.
+
+Finally:
+At the end, give me:
+1) Where to paste my NOTION_TOKEN and NOTION_DATABASE_ID in Replit (Secrets + deployment env)
+2) The exact curl commands to test GET and POST
+3) Any property-name mismatches you discovered in the Notion schema

@@ -1,0 +1,77 @@
+Fix Digest view so “Coming Soon” releases show even if Release Date is blank/future, while preventing stale “Coming Soon” items from cluttering Digest.
+
+Problem
+
+Digest defaults to a date window (last 30 days), so Coming Soon items with blank/future dates get excluded. But if we include all Coming Soon items, the list becomes noisy because many stale releases were never cleaned up.
+
+Design
+
+Digest should have two sections:
+
+1) Recently Released (date-driven)
+
+Show releases where:
+
+Status in: Fully Released, Partially Released, Beta
+
+AND Release Date is within selected date range (default: last 30 days)
+
+Date filter applies only to this section.
+
+2) Coming Soon (status-driven + freshness guard)
+
+Show releases where:
+
+Status = Coming Soon
+
+AND the item is “fresh” using either date or last-updated metadata
+
+Include Coming Soon releases if ANY of these are true:
+
+Release Date is in the future (we expect future dates typically within ~30 days, but allow future regardless)
+
+Release Date is blank AND Last Edited Time is within the last 30 days
+
+Release Date is within the last 30 days (catches items that may have shipped but weren’t re-statused yet)
+
+Exclude Coming Soon releases if:
+
+Release Date is blank OR past
+
+AND Last Edited Time is older than 30 days
+
+Display rules
+
+Coming Soon releases with blank date should display TBD
+
+Show “Coming Soon” section only if it has at least 1 included item
+
+Sorting rules
+
+Sort Coming Soon releases by:
+
+Release Date ascending (future dates first, soonest first)
+
+Then TBD items (blank dates) after dated items
+
+Optionally within TBD: sort by Last Edited Time descending (most recently updated first)
+
+Data requirements (Notion)
+
+Use Notion’s built-in metadata:
+
+last_edited_time (preferred)
+
+If not available in current payload, fetch it from the page or store it at sync time.
+
+Acceptance criteria
+
+Coming Soon + future date appears in Digest
+
+Coming Soon + blank date appears ONLY if edited in last 30 days (shows TBD)
+
+Old stale Coming Soon items (not edited in >30 days) do not appear
+
+Recently Released continues to respect the date filter
+
+Changing date filter does not affect Coming Soon section inclusion

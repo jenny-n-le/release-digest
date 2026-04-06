@@ -1,0 +1,145 @@
+Goal
+
+Add a Product multi-select dropdown in the top header that lets users filter releases by one or more products. This should sit to the left of the “All Statuses” dropdown and follow the same UI styling.
+
+This filter must affect:
+
+Which product groups render in the list
+
+The counts on each product group
+
+The export output
+
+1) Header UI Placement
+Add a new dropdown labeled Product
+
+Place it in the header row immediately left of the Status dropdown.
+
+Final header order should be:
+
+[View toggle] [Product ▾] [All Statuses ▾] [Date Range ▾] [Export]
+
+Styling requirements
+
+Same height, border radius, font size, and padding as the Status dropdown
+
+Same hover/focus styling
+
+Do not increase header height
+
+Keep spacing between controls consistent (use the same gap as between Status and Date Range)
+
+2) Product Dropdown: Default Display + Active Display
+Default (no filter applied)
+
+Button text:
+
+All products ▾
+
+When products are selected
+
+Do NOT show chips in the header. Instead, show a compact summary:
+
+If 1 product selected: Payroll ▾
+
+If 2 selected: Payroll + 1 ▾
+
+If 3+ selected: 3 products ▾
+
+If all selected: All products ▾
+
+(Keep the caret on the right.)
+
+3) Product Dropdown Popover Contents
+
+When user clicks Product dropdown, open a popover that contains:
+
+A) Search field
+
+Top of popover:
+
+Input placeholder: Search products…
+
+Filters the list below in real-time (case-insensitive)
+
+B) Quick actions row
+
+Below search:
+
+Select all
+
+Clear all
+
+Both actions reset the filter to “All products”.
+
+C) Checkbox list
+
+A list of all product names with checkboxes.
+
+Example:
+
+☐ Payroll
+
+☐ Benefits
+
+☐ Time & Scheduling
+
+☐ Mobile App
+
+☐ Hiring
+
+4) State + Filtering Logic
+State variable
+
+Create:
+
+selectedProducts: string[]
+
+Rule:
+
+selectedProducts = [] means All products (no filtering)
+
+Filter logic (product groups)
+
+When rendering product accordion groups:
+
+If selectedProducts is empty:
+
+show all product groups
+
+Else:
+
+show only groups where group.productName is included in selectedProducts
+
+5) Counts Must Update Correctly
+
+Each product group count badge must reflect the current filtered dataset, including:
+
+Date range
+
+Status filter
+
+Tier filter
+
+Product filter
+
+Example:
+If user selects Payroll + Hiring, only those groups render and their count badges show the number of releases that match all filters.
+
+6) Export Must Respect Product Filter
+
+The Export drawer output must include only releases that match:
+
+selectedProducts
+
+selectedStatus
+
+selectedTier
+
+dateRange
+
+7) Empty State
+
+If filtering results in no matching releases:
+Show:
+No releases found for this selection.

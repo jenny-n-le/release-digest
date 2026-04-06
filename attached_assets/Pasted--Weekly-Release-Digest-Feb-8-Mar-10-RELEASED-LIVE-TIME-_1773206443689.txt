@@ -1,0 +1,55 @@
+---------
+*Weekly Release Digest (Feb 8 - Mar 10)*
+
+🟢 *RELEASED & LIVE:*
+*_TIME & SCHEDULING_*
+    • <https://www.notion.so/Shared-Time-Clock-304a1747bfd180edb19dd4e32c886d47|Shared Time Clock> // Fully Released  (2026-02-09)
+        ◦ *What:* T&S customers can now set up a shared laptop or tablet at their location that allows employees to clock in and out from a single shared device.
+        ◦ *Why It Matters:* Previously, employees could only clock in and out using their personal mobile phones. Now, managers can launch Shared Mode from a shared device to create a centralized kiosk for their team.
+        ◦ *Owner of Feature:* Joachim Tan
+*_HIRING_*
+    • <https://www.notion.so/Disallow-Last-Minute-Rescheduling-31aa1747bfd1804c9c44ef33afe25587|Disallow Last-Minute Rescheduling> // Fully Released  (2026-03-03)
+        ◦ *What:* Disallow applicants to reschedule their interview 1 hour before the interview starts (they can still cancel the interview).
+        ◦ *Why It Matters:* Help our customers reduce the occurrence of last-minute rescheduling, which is hard to accommodate and also takes up other availabilities from their calendar.
+        ◦ *Owner of Feature:* Derek Dong
+    • <https://www.notion.so/Save-quick-replies-for-applicant-messages-30ba1747bfd1816a99bae96364e5da56|Save quick replies for applicant messages> // Fully Released  (2026-02-23)
+        ◦ *What:* Let users save frequently used messages and reuse them when messaging applicants.
+        ◦ *Why It Matters:* Greatly improve our users’ messaging efficiency when dealing with a big volume of applications.
+        ◦ *Owner of Feature:* Derek Dong
+    • <https://www.notion.so/VoiceAI-candidate-helper-311a1747bfd180b2965ac166cf709710|VoiceAI candidate helper> // Partially Released  (2026-02-25)
+        ◦ *What:* Candidates who have completed the screening call can now call the AI Agent’s phone number to have basic discussions (VoiceAI agent can respond to questions based on the company / job descriptions & let the candidate know what stage of the interview they’re in)
+        ◦ *Why It Matters:* Feedback from customers that the number “doesn’t work” after screening is complete.
+
+Allows candidates to have a more positive experience.
+        ◦ *Owner of Feature:* Deckel Israeli
+*_HRIS_*
+    • <https://www.notion.so/Bulk-import-team-members-30da1747bfd181a0b999e7bfdd1e6a20|Bulk import team members> // Fully Released  (2026-02-25)
+        ◦ *What:* Super Admins can add team members by bulk employee upload via Excel or CSV with column mapping, built-in data validation, SSN conflict detection, and guided error resolution.
+        ◦ *Why It Matters:* Enables HR admins to onboard multiple employees at once.
+        ◦ *Owner of Feature:* Vincent
+    • <https://www.notion.so/Tax-schema-UI-for-HRISv0-Non-payroll-306a1747bfd18027bbabdfc8ced2c064|Tax schema UI for HRISv0 + Non-payroll > // Partially Released  (2026-02-24)
+        ◦ *What:* Updated UI for tax withholdings page, clearer fields display under Team member profile and BE migration of data to pull from separate tax service
+        ◦ *Why It Matters:* It is now easier to update of any annual updates to tax forms across all states in future.
+        ◦ *Owner of Feature:* Joanne Tan
+*_MANAGER LOGBOOK, HRIS_*
+    • <https://www.notion.so/Notes-on-Employee-Profile-303a1747bfd180039813eaa47e164902|Notes on Employee Profile> // Partially Released  (2026-02-11)
+        ◦ *What:* You can now create notes on Employee Profile in HRIS, and it will also show up in Manager Logbook on the Worker App.
+        ◦ *Why It Matters:* HR and Admins can now see a full history of manager notes for a specific individual in one place, rather than searching through the daily Logbook.
+        ◦ *Owner of Feature:* Kai Sing Ng
+
+🔵 *COMING SOON:*
+*_HIRING_*
+    • <https://www.notion.so/Detect-possible-duplicate-applications-30ba1747bfd1815d9496e273e9a465c4|Detect possible duplicate applications> // Coming Soon
+        ◦ *What:* Currently we only use mobile number to detect duplicate applications. But we've seen applicants re-apply with different mobile numbers. So we will use their full name and email to detect whether there are any possible duplicate applications. Users can then compare their profile and determine whether they're from the same person or not.
+        ◦ *Why It Matters:* This helps saving the manual work of searching for names and emails to learn if the applicant has applied or been rejected before.
+        ◦ *Owner of Feature:* Derek Dong
+    • <https://www.notion.so/Let-applicants-pick-a-specific-interviewer-30ba1747bfd181698146f0c3aa0528c0|Let applicants pick a specific interviewer> // Coming Soon
+        ◦ *What:* When letting applicant choose from interview leads' calendar, if there are multiple interview leads configured in the hiring process settings, users will have the ability to let applicant choose only from a specific interviewer's calendar.
+        ◦ *Why It Matters:* This is particular useful when only certain interviewer can speak Spanish (or other language), or when they intentionally want dedicated person to be the interviewer.
+        ◦ *Owner of Feature:* Derek Dong
+*_PAYROLL, HRIS_*
+    • <https://www.notion.so/Effective-dated-earnings-304a1747bfd1801488aade3e7427b6c3|Effective dated earnings> // Coming Soon
+        ◦ *What:* Effective dated earnings
+        ◦ *Why It Matters:* With effective-dated earning rates, customers can proactively schedule rate changes instead of making reactive updates.
+        ◦ *Owner of Feature:* Bo Li
+

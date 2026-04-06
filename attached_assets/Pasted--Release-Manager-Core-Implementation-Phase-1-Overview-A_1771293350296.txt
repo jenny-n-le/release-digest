@@ -1,0 +1,861 @@
+# Release Manager - Core Implementation (Phase 1)
+
+## Overview
+A content management system for product release notes that displays as cards in the Digest module. **Notion integration will be added in Phase 2.**
+
+---
+
+## Data Model
+
+### Release Object Structure
+```javascript
+{
+  // Core identifiers
+  id: string,                    // Auto-generated UUID
+  
+  // Required fields
+  name: string,                  // Release title
+  status: 'In Development' | 'Coming Soon' | 'Partially Released' | 'Beta' | 'Fully Released',
+  when: Date,                    // Release date
+  what: string,                  // Description (rich text)
+  why: string,                   // Rationale (rich text)
+  owner: string,                 // PM name (the person managing the release)
+  who: string[],                 // Customer segments (who this rolls out to)
+  
+  // Optional fields
+  tier: 0 | 1 | 2 | 3,          // From Tier Calculator (impacts visibility/priority)
+  category: string,              // e.g., "Hiring", "HRIS"
+  attachments: Array<{
+    id: string,
+    name: string,
+    url: string,
+    type: 'image' | 'video',
+    size: number
+  }>,
+  resources: Array<{
+    title: string,
+    url: string,
+    type: 'PRD' | 'Documentation' | 'Enablement' | 'Other'
+  }>,
+  
+  // Metadata
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: string,
+  lastModifiedBy: string
+}
+```
+
+### Field Definitions
+
+| Field | Type | Required | Description | Maps to Digest |
+|-------|------|----------|-------------|----------------|
+| **Name** | Text | Yes | Release title | Card title |
+| **Status** | Dropdown | Yes | Current stage of release | Status badge |
+| **When** | Date | Yes | Target/actual release date | Date display |
+| **What** | Rich text | Yes | What changed/was released | "WHAT" section |
+| **Why** | Rich text | Yes | Rationale for change | "WHY" section |
+| **Owner** | Text | Yes | PM managing the release | Author/Owner display |
+| **Who** | Multi-select | Yes | Customer segments receiving release | Audience info |
+| **Tier** | Number (0-3) | No | Release importance (from calculator) | Tier badge/indicator |
+| **Category** | Dropdown | No | Product area (Hiring, HRIS, etc.) | Card grouping |
+| **Attachments** | Files | No | Screenshots, videos, demos | Media gallery |
+| **Resources** | URLs | No | Links to PRD, docs, enablement | Resource links |
+
+---
+
+## Release Status Options
+
+The status dropdown should include these exact options:
+
+1. **In Development** - Feature is being built
+2. **Coming Soon** - Feature complete, preparing for launch
+3. **Partially Released** - Rolling out to subset of customers
+4. **Beta** - Available for testing/early access
+5. **Fully Released** - Available to all customers
+
+### Status Badge Styling
+```javascript
+const statusStyles = {
+  'In Development': {
+    background: 'bg-purple-100',
+    text: 'text-purple-800',
+    border: 'border-purple-300'
+  },
+  'Coming Soon': {
+    background: 'bg-yellow-100',
+    text: 'text-yellow-800',
+    border: 'border-yellow-300'
+  },
+  'Partially Released': {
+    background: 'bg-blue-100',
+    text: 'text-blue-800',
+    border: 'border-blue-300'
+  },
+  'Beta': {
+    background: 'bg-orange-100',
+    text: 'text-orange-800',
+    border: 'border-orange-300'
+  },
+  'Fully Released': {
+    background: 'bg-green-100',
+    text: 'text-green-800',
+    border: 'border-green-300'
+  }
+};
+```
+
+---
+
+## Customer Segments (Who Field)
+
+### Common Customer Segments
+```javascript
+const customerSegments = [
+  'Enterprise customers',
+  'Mid-market customers',
+  'Small business customers',
+  'All customers',
+  'Beta testers',
+  'Early adopters',
+  'Specific industries (e.g., Healthcare, Finance)',
+  'Geographic regions (e.g., US, EU, APAC)',
+  'Custom segment'
+];
+```
+
+**UI Implementation:**
+- Multi-select dropdown (can choose multiple segments)
+- Allow custom entries for flexibility
+- Display as comma-separated list on Digest cards
+
+---
+
+## Release Manager Form Layout
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Release Manager                          [Save] [Cancel]│
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  Release Name *                                          │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Candidate Scoring Algorithm v2                  │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  Status *                  When (Release Date) *         │
+│  ┌──────────────────┐    ┌────────────────────┐        │
+│  │ Coming Soon  ▼   │    │ 2026-02-14     📅  │        │
+│  └──────────────────┘    └────────────────────┘        │
+│                                                           │
+│  Owner (PM) *              Tier                          │
+│  ┌──────────────────┐    ┌────────────────────┐        │
+│  │ Alex Rivera      │    │ 1 (High)       ▼   │        │
+│  └──────────────────┘    └────────────────────┘        │
+│                                                           │
+│  Who (Customer Segments) *                               │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ ☑ All customers                                  │   │
+│  │ ☐ Enterprise customers                           │   │
+│  │ ☐ Beta testers                                   │   │
+│  │ [+ Add custom segment]                           │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  Category                                                │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Hiring                                        ▼  │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  What (Description) *                                    │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ [Rich text editor with formatting toolbar]       │   │
+│  │                                                   │   │
+│  │ Updated candidate scoring with skills-based      │   │
+│  │ matching, bias detection safeguards, and         │   │
+│  │ configurable weighting for hiring managers.      │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  Why (Rationale) *                                       │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ [Rich text editor]                                │   │
+│  │                                                   │   │
+│  │ The v1 algorithm was too rigid and did not       │   │
+│  │ account for transferable skills or non-          │   │
+│  │ traditional backgrounds.                          │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  Videos & Screenshots                                    │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ [Drag & drop or click to upload]                 │   │
+│  │                                                   │   │
+│  │ 📎 screenshot1.png                    [Remove]   │   │
+│  │ 📎 demo-video.mp4                     [Remove]   │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+│  Resources & Documentation Links                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ PRD: https://docs.internal.com/prd-123          │   │
+│  │ Enablement: https://docs.internal.com/enable    │   │
+│  │                                      [+ Add Link]│   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Mapping to Digest Cards
+
+### Current Digest Card Structure (from screenshot)
+```
+┌────────────────────────────────────────────────────┐
+│  📁 Category Name                            1     │  ← Collapsible section
+├────────────────────────────────────────────────────┤
+│                                                     │
+│  Release Name                     [Status Badge]   │  ← From Release Manager
+│  📅 2026-02-14  👤 Alex Rivera                     │  ← When + Owner
+│  🎯 Tier 1                                         │  ← NEW: Show tier
+│  👥 All customers, Beta testers                    │  ← NEW: Show who/segments
+│                                                     │
+│  WHAT    Description text from Release Manager     │  ← What field
+│                                                     │
+│  WHY     Rationale text from Release Manager       │  ← Why field
+│                                                     │
+└────────────────────────────────────────────────────┘
+```
+
+### Enhanced Digest Card Component
+```jsx
+function DigestCard({ release }) {
+  return (
+    <div className="bg-white rounded-lg border p-4 shadow-sm hover:shadow-md transition">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-semibold flex-1">
+          {release.name}
+        </h3>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusStyle(release.status)}`}>
+          {release.status}
+        </span>
+      </div>
+      
+      {/* Metadata row */}
+      <div className="flex flex-wrap gap-3 mb-3 text-sm text-gray-600">
+        <div className="flex items-center gap-1">
+          <span>📅</span>
+          <span>{formatDate(release.when)}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span>👤</span>
+          <span>{release.owner}</span>
+        </div>
+        {release.tier && (
+          <div className="flex items-center gap-1">
+            <span>🎯</span>
+            <span className="font-medium">Tier {release.tier}</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Customer segments */}
+      {release.who && release.who.length > 0 && (
+        <div className="flex items-start gap-2 mb-3 text-sm">
+          <span className="text-gray-500">👥</span>
+          <span className="text-gray-700">
+            {release.who.join(', ')}
+          </span>
+        </div>
+      )}
+      
+      {/* What section */}
+      <div className="mb-3">
+        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
+          What
+        </div>
+        <div className="text-sm text-gray-800">
+          {release.what}
+        </div>
+      </div>
+      
+      {/* Why section */}
+      <div className="mb-3">
+        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">
+          Why
+        </div>
+        <div className="text-sm text-gray-800">
+          {release.why}
+        </div>
+      </div>
+      
+      {/* Attachments preview (if any) */}
+      {release.attachments && release.attachments.length > 0 && (
+        <div className="flex gap-2 mb-3">
+          {release.attachments.slice(0, 3).map(att => (
+            <div key={att.id} className="w-16 h-16 bg-gray-100 rounded overflow-hidden">
+              {att.type === 'image' ? (
+                <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex items-center justify-center h-full text-2xl">
+                  🎥
+                </div>
+              )}
+            </div>
+          ))}
+          {release.attachments.length > 3 && (
+            <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-sm text-gray-600">
+              +{release.attachments.length - 3}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Resource links */}
+      {release.resources && release.resources.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {release.resources.map((resource, idx) => (
+            <a
+              key={idx}
+              href={resource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+            >
+              🔗 {resource.type || 'Link'}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Database Schema (Simple Version)
+
+### Using MongoDB/NoSQL
+```javascript
+const releaseSchema = {
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  status: { 
+    type: String, 
+    required: true,
+    enum: ['In Development', 'Coming Soon', 'Partially Released', 'Beta', 'Fully Released']
+  },
+  when: { type: Date, required: true },
+  what: { type: String, required: true },
+  why: { type: String, required: true },
+  owner: { type: String, required: true },
+  who: { type: [String], required: true },
+  tier: { type: Number, min: 0, max: 3 },
+  category: { type: String },
+  attachments: [{
+    id: String,
+    name: String,
+    url: String,
+    type: String,
+    size: Number
+  }],
+  resources: [{
+    title: String,
+    url: String,
+    type: String
+  }],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  createdBy: { type: String },
+  lastModifiedBy: { type: String }
+};
+```
+
+### Using SQL (PostgreSQL)
+```sql
+CREATE TABLE releases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  status VARCHAR(50) NOT NULL CHECK (status IN (
+    'In Development', 
+    'Coming Soon', 
+    'Partially Released', 
+    'Beta', 
+    'Fully Released'
+  )),
+  when DATE NOT NULL,
+  what TEXT NOT NULL,
+  why TEXT NOT NULL,
+  owner VARCHAR(255) NOT NULL,
+  who TEXT[] NOT NULL,  -- Array of customer segments
+  tier INTEGER CHECK (tier >= 0 AND tier <= 3),
+  category VARCHAR(100),
+  attachments JSONB,
+  resources JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  created_by VARCHAR(255),
+  last_modified_by VARCHAR(255)
+);
+
+CREATE INDEX idx_releases_status ON releases(status);
+CREATE INDEX idx_releases_when ON releases(when);
+CREATE INDEX idx_releases_category ON releases(category);
+```
+
+---
+
+## API Endpoints (Simplified)
+
+```javascript
+// GET /api/releases - List all releases
+// Query params: status, category, dateFrom, dateTo
+router.get('/api/releases', async (req, res) => {
+  const { status, category, dateFrom, dateTo } = req.query;
+  
+  let query = {};
+  
+  if (status) query.status = status;
+  if (category) query.category = category;
+  if (dateFrom || dateTo) {
+    query.when = {};
+    if (dateFrom) query.when.$gte = new Date(dateFrom);
+    if (dateTo) query.when.$lte = new Date(dateTo);
+  }
+  
+  const releases = await db.releases
+    .find(query)
+    .sort({ when: -1 })
+    .exec();
+  
+  res.json(releases);
+});
+
+// GET /api/releases/:id - Get single release
+router.get('/api/releases/:id', async (req, res) => {
+  const release = await db.releases.findById(req.params.id);
+  if (!release) {
+    return res.status(404).json({ error: 'Release not found' });
+  }
+  res.json(release);
+});
+
+// POST /api/releases - Create new release
+router.post('/api/releases', async (req, res) => {
+  try {
+    const release = await db.releases.create({
+      ...req.body,
+      id: generateUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: req.user.id  // from auth middleware
+    });
+    
+    res.status(201).json(release);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// PUT /api/releases/:id - Update release
+router.put('/api/releases/:id', async (req, res) => {
+  try {
+    const release = await db.releases.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...req.body,
+        updatedAt: new Date(),
+        lastModifiedBy: req.user.id
+      },
+      { new: true, runValidators: true }
+    );
+    
+    if (!release) {
+      return res.status(404).json({ error: 'Release not found' });
+    }
+    
+    res.json(release);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// DELETE /api/releases/:id - Delete release
+router.delete('/api/releases/:id', async (req, res) => {
+  try {
+    const release = await db.releases.findByIdAndDelete(req.params.id);
+    
+    if (!release) {
+      return res.status(404).json({ error: 'Release not found' });
+    }
+    
+    res.json({ success: true, message: 'Release deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+---
+
+## React Components (Simplified)
+
+### Release Form
+```jsx
+import { useState } from 'react';
+
+const STATUS_OPTIONS = [
+  'In Development',
+  'Coming Soon',
+  'Partially Released',
+  'Beta',
+  'Fully Released'
+];
+
+const CUSTOMER_SEGMENTS = [
+  'All customers',
+  'Enterprise customers',
+  'Mid-market customers',
+  'Small business customers',
+  'Beta testers',
+  'Early adopters'
+];
+
+const TIER_OPTIONS = [
+  { value: 0, label: '0 (Untiered)' },
+  { value: 1, label: '1 (High Priority)' },
+  { value: 2, label: '2 (Medium Priority)' },
+  { value: 3, label: '3 (Low Priority)' }
+];
+
+export function ReleaseForm({ releaseId, onSave, onCancel }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    status: 'Coming Soon',
+    when: new Date().toISOString().split('T')[0],
+    what: '',
+    why: '',
+    owner: '',
+    who: [],
+    tier: 1,
+    category: '',
+    attachments: [],
+    resources: []
+  });
+  
+  const [customSegment, setCustomSegment] = useState('');
+  
+  // Load existing release if editing
+  useEffect(() => {
+    if (releaseId) {
+      fetch(`/api/releases/${releaseId}`)
+        .then(res => res.json())
+        .then(data => setFormData(data));
+    }
+  }, [releaseId]);
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const url = releaseId ? `/api/releases/${releaseId}` : '/api/releases';
+    const method = releaseId ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    
+    if (response.ok) {
+      const savedRelease = await response.json();
+      onSave(savedRelease);
+    }
+  };
+  
+  const toggleSegment = (segment) => {
+    setFormData(prev => ({
+      ...prev,
+      who: prev.who.includes(segment)
+        ? prev.who.filter(s => s !== segment)
+        : [...prev.who, segment]
+    }));
+  };
+  
+  const addCustomSegment = () => {
+    if (customSegment.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        who: [...prev.who, customSegment.trim()]
+      }));
+      setCustomSegment('');
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-6">
+      <div className="space-y-4">
+        {/* Release Name */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Release Name *
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="e.g., Candidate Scoring Algorithm v2"
+          />
+        </div>
+        
+        {/* Status and Date */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Status *</label>
+            <select
+              required
+              value={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              {STATUS_OPTIONS.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">When (Release Date) *</label>
+            <input
+              type="date"
+              required
+              value={formData.when}
+              onChange={(e) => setFormData({...formData, when: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg"
+            />
+          </div>
+        </div>
+        
+        {/* Owner and Tier */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Owner (PM) *</label>
+            <input
+              type="text"
+              required
+              value={formData.owner}
+              onChange={(e) => setFormData({...formData, owner: e.target.value})}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="Your name"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Tier</label>
+            <select
+              value={formData.tier}
+              onChange={(e) => setFormData({...formData, tier: parseInt(e.target.value)})}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              {TIER_OPTIONS.map(tier => (
+                <option key={tier.value} value={tier.value}>{tier.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        {/* Customer Segments (Who) */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Who (Customer Segments) *
+          </label>
+          <div className="border rounded-lg p-3 space-y-2">
+            {CUSTOMER_SEGMENTS.map(segment => (
+              <label key={segment} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.who.includes(segment)}
+                  onChange={() => toggleSegment(segment)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">{segment}</span>
+              </label>
+            ))}
+            
+            {/* Custom segments */}
+            {formData.who
+              .filter(s => !CUSTOMER_SEGMENTS.includes(s))
+              .map(segment => (
+                <div key={segment} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={true}
+                    onChange={() => toggleSegment(segment)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{segment}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleSegment(segment)}
+                    className="text-red-600 text-xs ml-auto"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            
+            {/* Add custom segment */}
+            <div className="flex gap-2 mt-2 pt-2 border-t">
+              <input
+                type="text"
+                value={customSegment}
+                onChange={(e) => setCustomSegment(e.target.value)}
+                placeholder="Add custom segment..."
+                className="flex-1 px-2 py-1 border rounded text-sm"
+              />
+              <button
+                type="button"
+                onClick={addCustomSegment}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+          {formData.who.length === 0 && (
+            <p className="text-red-600 text-sm mt-1">Select at least one customer segment</p>
+          )}
+        </div>
+        
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <input
+            type="text"
+            value={formData.category}
+            onChange={(e) => setFormData({...formData, category: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="e.g., Hiring, HRIS"
+          />
+        </div>
+        
+        {/* What */}
+        <div>
+          <label className="block text-sm font-medium mb-1">What (Description) *</label>
+          <textarea
+            required
+            value={formData.what}
+            onChange={(e) => setFormData({...formData, what: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            rows={4}
+            placeholder="Describe what changed or was released..."
+          />
+        </div>
+        
+        {/* Why */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Why (Rationale) *</label>
+          <textarea
+            required
+            value={formData.why}
+            onChange={(e) => setFormData({...formData, why: e.target.value})}
+            className="w-full px-3 py-2 border rounded-lg"
+            rows={4}
+            placeholder="Explain the rationale for this change..."
+          />
+        </div>
+        
+        {/* Form Actions */}
+        <div className="flex gap-3 pt-4">
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Save Release
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+```
+
+---
+
+## Implementation Checklist
+
+### Phase 1: Core Release Manager
+- [ ] Set up database (MongoDB or PostgreSQL)
+- [ ] Create releases table/collection
+- [ ] Build API endpoints (CRUD operations)
+- [ ] Create Release Form component
+- [ ] Add file upload functionality (optional for now)
+- [ ] Create Release List view
+- [ ] Add search and filter functionality
+- [ ] Implement form validation
+
+### Phase 2: Digest Integration
+- [ ] Update Digest card component to show new fields:
+  - [ ] Tier indicator
+  - [ ] Customer segments (who)
+  - [ ] Updated status badges
+- [ ] Ensure date filter works with releases
+- [ ] Implement category grouping
+- [ ] Test data flow: Release Manager → Digest
+
+### Phase 3: Polish
+- [ ] Add tier calculator integration
+- [ ] File upload for attachments
+- [ ] Resource link management
+- [ ] Rich text editor for What/Why fields
+- [ ] Responsive design
+- [ ] Loading states and error handling
+
+### Phase 4 (Future): Notion Integration
+- [ ] Set up Notion API
+- [ ] Build two-way sync
+- [ ] Add conflict resolution
+- [ ] Migration tools
+
+---
+
+## Quick Start Example Data
+
+```javascript
+// Sample release for testing
+const sampleRelease = {
+  id: "rel_001",
+  name: "Candidate Scoring Algorithm v2",
+  status: "Coming Soon",
+  when: "2026-02-14",
+  what: "Updated candidate scoring with skills-based matching, bias detection safeguards, and configurable weighting for hiring managers.",
+  why: "The v1 algorithm was too rigid and did not account for transferable skills or non-traditional backgrounds.",
+  owner: "Alex Rivera",
+  who: ["All customers", "Beta testers"],
+  tier: 1,
+  category: "Hiring",
+  attachments: [],
+  resources: [
+    { title: "PRD", url: "https://docs.internal.com/prd-123", type: "PRD" }
+  ],
+  createdAt: "2026-02-10T10:00:00Z",
+  updatedAt: "2026-02-10T10:00:00Z"
+};
+```
+
+---
+
+## Notes
+
+- Focus on getting the core Release Manager working first
+- Ensure proper mapping to Digest cards
+- File uploads can be added later if needed
+- Keep it simple - avoid over-engineering
+- Notion integration is explicitly deferred to Phase 4

@@ -1,0 +1,159 @@
+# App: Release Notes → Weekly Digest (Slack + Email)
+
+## Goal
+PMs already write release notes into a Notion database. Build an app that:
+1) Reads release notes from a Notion database (backend integration).
+2) Generates a weekly digest grouped by Product.
+3) Displays the digest on a “Weekly Digest” page (front end first).
+Later: export/format for Slack + Email.
+
+## Core Output (Digest Structure)
+Weekly digest is sectioned by Product. Under each Product, list releases with:
+
+- Product (group header, e.g., Payroll)
+- Release Name (link to Notion page that includes screenshots/videos)
+- Status (e.g., In Development, Coming Soon, Released, Partially Released)
+- Release Date (date)
+- What (brief description)
+- Why (why it matters)
+- Knowledge Article Link (URL)
+- Owner of release (name)
+
+## Front End Pages (start here)
+### 1) Weekly Digest
+- Week picker (default: current week; supports past weeks)
+- “Generate digest” button (build digest from Notion data for that date range)
+- Digest preview UI:
+  - Products as collapsible sections
+  - Releases displayed as cards/rows within each product
+  - Release name is a clickable link to Notion
+  - Optional: filter by Product, Status, Owner
+- Actions:
+  - Copy Slack version
+  - Copy Email version (HTML-ish or rich text)
+  - Download as Markdown (optional)
+
+## Backend Requirements
+### Notion Access
+- Backend must have access to the Notion database via Notion API.
+- Store secrets in environment variables:
+  - NOTION_TOKEN
+  - NOTION_DATABASE_ID
+
+### Data Fetch + Normalization
+- Query Notion database for releases within a date range (week start → week end).
+- Normalize each Notion row into this shape:
+
+Release {
+  id: string
+  product: string
+  releaseName: string
+  notionUrl: string
+  status: string
+  releaseDate: string (ISO)
+  what: string
+  why: string
+  knowledgeArticleUrl: string | null
+  owner: string | null
+}
+
+### Digest Generation Logic
+- Group releases by product (string).
+- Within each product, sort by releaseDate ascending (or status priority: Released first).
+- Render into two formatted outputs:
+  1) Slack format (plain text with emoji/bullets, links)
+  2) Email format (simple HTML or markdown that converts cleanly)
+
+Slack formatting example:
+- *Payroll*
+  - <NotionLink|Release Name> — *Status* (Release Date)
+    - *What:* ...
+    - *Why:* ...
+    - *KA:* link (if exists)
+    - *Owner:* ...
+
+Email formatting example:
+- H2 Product
+- Each release with bold labels and linked title
+
+## Tech Stack (pick one and implement cleanly)
+- Frontend: Next.js + React + Tailwind
+- Backend: Next.js API routes (or Express if preferred)
+- Data fetching: Notion SDK (@notionhq/client)
+- No database needed for v0 (read live from Notion). Optional caching later.
+
+## Notion Database Property Mapping (make configurable)
+Assume Notion database has these properties (names may vary, so create a mapping object in code):
+- Product (select)
+- Name / Release Name (title)
+- Status (select)
+- Release Date (date)
+- What (rich text)
+- Why (rich text)
+- Knowledge Article Link (url)
+- Owner (people or rich text)
+
+Implementation requirement:
+- Create a single config file:
+  notionPropertyMap = {
+    product: "Product",
+    releaseName: "Name",
+    status: "Status",
+    releaseDate: "Release Date",
+    what: "What",
+    why: "Why",
+    knowledgeArticleUrl: "Knowledge Article Link",
+    owner: "Owner"
+  }
+
+## API Endpoints
+1) GET /api/releases?start=YYYY-MM-DD&end=YYYY-MM-DD
+- Returns normalized Release[]
+
+2) GET /api/digest?start=YYYY-MM-DD&end=YYYY-MM-DD
+- Returns:
+  {
+    start, end,
+    grouped: { [product: string]: Release[] },
+    slackText: string,
+    emailHtml: string,
+    emailMarkdown: string (optional)
+  }
+
+## UI Details (Weekly Digest page)
+- Header: “Weekly Release Digest”
+- Week range display (e.g., Feb 9–Feb 15, 2026)
+- Controls row:
+  - week picker
+  - product filter multi-select
+  - status filter
+  - generate/refresh button
+- Main:
+  - collapsible product sections with counts
+  - release cards:
+    - Title (linked)
+    - status pill
+    - release date
+    - what, why (truncate with “show more”)
+    - KA link (if exists)
+    - owner (if exists)
+- Right side (or modal):
+  - Slack preview textarea + “Copy”
+  - Email preview (rendered) + “Copy HTML” + “Copy text”
+
+## Error Handling
+- If Notion token/database missing: show a helpful setup screen.
+- If Notion returns no releases: show empty state with date range.
+- If a property is missing on a row: gracefully omit that field.
+
+## Nice-to-haves (after v0)
+- Save generated digests (history) with a lightweight DB (SQLite/Postgres) so past digests are stable even if Notion changes.
+- Slack posting via webhook (per channel)
+- Email sending via SendGrid/Gmail API
+- Auth (simple password or SSO) if needed
+
+## Build Order
+1) Set up Next.js app + Weekly Digest page UI skeleton.
+2) Add Notion integration and /api/releases.
+3) Implement grouping + digest formatter and /api/digest.
+4) Wire UI to show grouped digest + copy/export actions.

@@ -1,0 +1,134 @@
+Replit Instructions: Date Range Picker Improvements
+Goal
+
+Simplify the header by removing Refresh, and upgrade the calendar control so users can quickly view releases for the last 30 / 60 / 90 days, or select a custom start and end date.
+
+1) Remove Refresh Button
+
+Remove the Refresh button from the header entirely.
+
+Data should refresh automatically when:
+
+Date range changes
+
+Status filter changes
+
+Tier filter changes
+
+Optional (nice-to-have):
+
+When filters change, show a subtle loading indicator (spinner) inside the release list area.
+
+2) Upgrade Calendar to Support “Last 30 / 60 / 90 Days”
+UI Placement
+
+When the user clicks the calendar/date range field, open a date picker popover.
+
+At the top of the popover (or in a left sidebar inside the popover), add Quick Range options:
+
+Last 30 days
+
+Last 60 days
+
+Last 90 days
+
+Behavior
+
+Clicking a quick range instantly sets:
+
+startDate = today - N days
+
+endDate = today (inclusive)
+
+Close the popover after selecting a quick range.
+
+Trigger a data reload immediately after applying the range.
+
+Visual Details
+
+Show the selected quick range as “active” (highlighted) while it matches the current selection.
+
+3) Allow Custom Start + End Date Selection
+UI Behavior
+
+The calendar must allow selecting a range:
+
+First click selects start date
+
+Second click selects end date
+
+Highlight the range between them
+
+If user clicks a date earlier than the start date:
+
+Treat it as a new start date (reset selection).
+
+Controls in the Popover
+
+Add these elements:
+
+A) Date Range Inputs
+
+Two small inputs (or read-only fields) in the popover:
+
+Start Date
+
+End Date
+
+These should update when the user clicks on calendar dates.
+
+B) Apply / Cancel Buttons
+
+Apply: sets the range and triggers reload
+
+Cancel: closes popover without changes
+
+Defaults
+
+When opening the calendar:
+
+Pre-fill Start/End based on the currently selected range.
+
+Validation Rules
+
+Start date cannot be after end date.
+
+End date cannot be in the future (optional, but recommended for “release digest” use case).
+
+4) Display in Header
+
+The header date control should display:
+
+MMM D – MMM D, YYYY
+
+Examples:
+
+Jan 26 – Feb 1, 2026
+
+Feb 1 – Mar 2, 2026
+
+When a quick range is active, optionally show:
+
+Last 30 days as a small sublabel or tooltip (not required)
+
+5) Data Query Contract (Important)
+
+All release fetching should be driven by:
+
+startDate
+
+endDate
+
+Filters like tier/status should apply on top of that.
+
+Whenever either date changes:
+
+Re-query Notion (or your backend endpoint)
+
+Re-render release groups
+
+6) Empty + Loading States
+
+While loading: show skeleton cards or spinner in list area
+
+If no results: show “No releases found for this date range.”

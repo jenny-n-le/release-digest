@@ -1,0 +1,78 @@
+Goal
+Fix bi-directional sync of content stored in the Notion “Release Name” page body.
+
+Key requirement
+The following 3 Notion page body sections must map 1:1 across:
+1) Notion Release Name page body
+2) Release Manager editor (editable UI)
+3) Digest detailed view (read-only rendering)
+
+These sections are NOT database properties. They live in the Notion page body under headings.
+
+Template headings (must match exactly)
+- "Detailed Overview"
+- "Videos & Screenshots"
+- "Enablement Deck or Links"
+
+Section boundary rule
+For each section:
+- Find the heading block whose text equals the section title.
+- Section content is all blocks AFTER that heading UNTIL:
+  - the next heading block of the same level, OR
+  - end of page.
+
+Important: template guide text
+Under "Detailed Overview", the template includes an instructional line:
+"(Include PRD, write-up, customer segments impacted, roll out plan if relevant)"
+Treat this as placeholder guide text.
+- On load: do not show it in Release Manager or Digest if it is unchanged template text.
+- On save: if PM replaces/edits it, then it becomes real content and should sync normally.
+
+Bi-directional behavior
+
+A) Notion → App (Load)
+When opening a release:
+1) Resolve the Notion page ID from the database row’s Release Name linked page.
+2) Fetch page children.
+3) Extract blocks for each of the 3 sections using the boundary rule above.
+4) Convert to internal block-structured representation (do not flatten-only).
+5) Populate:
+   - Release Manager editor sections (editable)
+   - Digest detailed view rendering (read-only)
+
+B) App → Notion (Save)
+When user edits ONE section in Release Manager and clicks Save:
+1) Fetch page children fresh.
+2) Locate that section’s heading block.
+3) Identify the block range under that heading (until next same-level heading or end).
+4) Delete/archive ONLY the blocks in that range (leave the heading intact).
+5) Convert the updated section content into Notion blocks.
+6) Insert them immediately after the section heading.
+7) Do not modify any blocks outside that section.
+This must not overwrite the other two sections.
+
+Minimal template enforcement (only to prevent missing mappings)
+On load or before save:
+If any of the 3 headings is missing, append the missing heading(s) at the bottom of the page
+(using the same heading level as the existing ones).
+
+Deliverables (implementation)
+Create/adjust helper functions:
+- fetchPageChildren(pageId)
+- findHeadingIndex(children, exactTitle)
+- getSectionRange(children, headingIndex) -> [start, endExclusive]
+- extractSectionBlocks(children, sectionTitle)
+- replaceSectionBlocks(pageId, sectionTitle, newBlocks)
+
+Add debug logs:
+- sectionTitle, headingFound, blocksExtracted, blocksReplaced
+- missingHeadingAppended
+
+Acceptance tests
+- Editing “Detailed Overview” in Release Manager updates ONLY that section in Notion and reloads correctly.
+- Editing “Videos & Screenshots” updates ONLY that section.
+- Editing “Enablement Deck or Links” updates ONLY that section.
+- Digest detailed view shows the same Notion section content (1:1).
+- Template guide text under Detailed Overview is not treated as content unless edited.
+
+

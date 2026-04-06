@@ -1,0 +1,149 @@
+Goal
+All three systems must map 1:1:
+Notion Database (source of truth with bi-directional integration)
+
+
+Release Manager (create/edit/delete view)
+
+
+Weekly Digest Cards (read-only view)
+
+
+Every field must be consistent across all three. No derived-only fields. No mismatched labels.
+
+Field Mapping (1:1 Across All Systems)
+Core Fields from Notion
+These fields must exist identically in:
+Notion Database
+
+
+Release Manager
+
+
+Weekly Digest
+
+
+Fields (Do not make any of them required since they are not required in Notion)
+Release Status
+
+
+Release Date
+
+
+Release Name
+
+
+The Release Name links to its Notion page.
+
+
+The Notion page contains:
+
+
+Overview & Context (long-form)
+
+
+Media (screenshots, videos)
+
+
+Supporting links
+
+
+Product
+
+
+Maps to: Product Category
+
+
+Must support multi-select (a release can belong to multiple products)
+
+
+Brief Description
+
+
+Display label: What
+
+
+Why It Matters
+
+
+Display label: Why It Matters
+
+
+Do not shorten to just “Why”
+
+
+Release Tier
+
+
+Knowledge Article Link
+
+
+Owner of Feature
+
+
+
+Overview Section (Release Manager)
+Inside the Release Manager:
+Create a dedicated “Overview” section.
+This section should:
+Pull long-form content from the Notion Release Name page
+
+
+Surface:
+
+
+Overview & Context text
+
+
+Embedded media (images/videos)
+
+
+Relevant links
+
+
+Release manager should be directional. In the future, most people will likely create most content inside the release manager instead of notion. Changes are pushed to Notion when a new release is submitted, or when a release edit is “saved”. 
+
+System Rules
+Notion = source of truth.
+
+
+Every field must exist in:
+
+
+Notion
+
+
+Release Manager
+
+
+Weekly Digest
+
+
+Field names must match exactly.
+
+
+Release Name page in Notion holds:
+
+
+Long-form Overview
+
+
+Media
+
+
+Supporting context
+
+
+That long-form content maps to:
+
+
+“Overview” section in Release Manager
+
+
+Media sections in Digest and Release detail views
+
+
+No partial mappings. No missing fields. Full 1:1 parity across systems.
+
+Also make the updates on mapping the export to Slack & Email fields so everything is mapped correctly.
+
