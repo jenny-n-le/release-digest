@@ -25,8 +25,8 @@ app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
 
 const ready = registerRoutes(httpServer, app);
 
-// Serve static frontend files — __dirname is api/ so dist/public is one level up
-const staticPath = path.join(__dirname, "..", "dist", "public");
+// process.cwd() = project root (/var/task) on Vercel
+const staticPath = path.join(process.cwd(), "dist", "public");
 if (fs.existsSync(staticPath)) {
   app.use(express.static(staticPath));
   app.use("*", (_req, res) => {
