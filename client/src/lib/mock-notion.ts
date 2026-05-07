@@ -97,6 +97,9 @@ const TIER_PRIORITY: Record<string, number> = {
   'Untiered': 4,
 };
 
+const RELEASED_STATUS_SET = new Set(["Fully Released", "Partially Released", "Beta"]);
+const COMING_SOON_STATUS_SET = new Set(["Coming Soon"]);
+
 export function sortByTierThenDate(releases: Release[]): Release[] {
   return [...releases].sort((a, b) => {
     const aPri = a.tier ? (TIER_PRIORITY[a.tier] ?? 5) : 5;
@@ -119,9 +122,13 @@ export const groupReleasesByProduct = (releases: Release[]): Record<string, Rele
     return acc;
   }, {} as Record<string, Release[]>);
 
-  const bestTierForGroup = (productReleases: Release[]): number => {
+  const hasReleased = (productReleases: Release[]): boolean =>
+    productReleases.some(r => RELEASED_STATUS_SET.has(r.status));
+
+  const bestReleasedTier = (productReleases: Release[]): number => {
     let best = 99;
     for (const r of productReleases) {
+      if (!RELEASED_STATUS_SET.has(r.status)) continue;
       const pri = r.tier ? (TIER_PRIORITY[r.tier] ?? 5) : 5;
       if (pri < best) best = pri;
     }
@@ -130,8 +137,13 @@ export const groupReleasesByProduct = (releases: Release[]): Record<string, Rele
 
   const entries = Object.entries(grouped);
   entries.sort((a, b) => {
-    const aTier = bestTierForGroup(a[1]);
-    const bTier = bestTierForGroup(b[1]);
+    // Products with any released releases always come before coming-soon-only products
+    const aHas = hasReleased(a[1]) ? 0 : 1;
+    const bHas = hasReleased(b[1]) ? 0 : 1;
+    if (aHas !== bHas) return aHas - bHas;
+    // Within same category, rank by best tier among released releases
+    const aTier = bestReleasedTier(a[1]);
+    const bTier = bestReleasedTier(b[1]);
     if (aTier !== bTier) return aTier - bTier;
     const aIdx = PRODUCT_ORDER.indexOf(a[0]);
     const bIdx = PRODUCT_ORDER.indexOf(b[0]);
@@ -146,9 +158,6 @@ export const groupReleasesByProduct = (releases: Release[]): Record<string, Rele
   }
   return ordered;
 };
-
-const RELEASED_STATUS_SET = new Set(["Fully Released", "Partially Released", "Beta"]);
-const COMING_SOON_STATUS_SET = new Set(["Coming Soon"]);
 
 function groupByStatusCategory(releases: Release[]): { released: Release[]; comingSoon: Release[]; inDevelopment: Release[] } {
   const released: Release[] = [];
