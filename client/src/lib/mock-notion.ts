@@ -267,12 +267,26 @@ export const generateEmailHtml = (grouped: Record<string, Release[]>, startStr: 
   let html = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; max-width: 720px; margin: 0 auto;">`;
   html += `<h1 style="font-size: 24px; font-weight: 700; margin-bottom: 32px; color: #111;">Bi-Weekly Release Digest (Last 30 Days)</h1>`;
 
+  const STATUS_ORDER: Record<string, number> = {
+    'Fully Released': 0, 'Partially Released': 1, 'Beta': 2,
+    'Coming Soon': 3, 'In Development': 4,
+  };
+
   Object.entries(grouped).forEach(([product, releases]) => {
+    const sorted = [...releases].sort((a, b) => {
+      const aStatus = STATUS_ORDER[a.status] ?? 5;
+      const bStatus = STATUS_ORDER[b.status] ?? 5;
+      if (aStatus !== bStatus) return aStatus - bStatus;
+      const aTier = a.tier ? (TIER_PRIORITY[a.tier] ?? 5) : 5;
+      const bTier = b.tier ? (TIER_PRIORITY[b.tier] ?? 5) : 5;
+      return aTier - bTier;
+    });
+
     html += `<div style="margin-top: 32px;">`;
     html += `<h2 style="color: ${brandBlue}; font-size: 16px; font-weight: 700; margin: 0 0 4px 0;">${product}</h2>`;
     html += `<div style="border-bottom: 2px solid #e5e7eb; margin-bottom: 16px;"></div>`;
 
-    releases.forEach(release => {
+    sorted.forEach(release => {
       const datePart = release.releaseDate ? `<span style="color: #6b7280; font-size: 14px; font-weight: 400; margin-left: 4px;">(${release.releaseDate})</span>` : '';
       const statusBadge = `<span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; margin-left: 12px; white-space: nowrap;">${release.status}</span>`;
       const tierBadge = release.tier ? `<span style="background: #eef2ff; color: ${navy}; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; margin-left: 6px; white-space: nowrap;">${release.tier}</span>` : '';
