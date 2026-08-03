@@ -36,6 +36,28 @@ function extractDate(dateProp: any): string {
   return dateProp.start;
 }
 
+// "Approved Release Date" is a formula that can resolve to either a date or a
+// YYYY-MM-DD string depending on how it's configured in Notion.
+function extractFormulaDate(formulaProp: any): string {
+  if (!formulaProp) return "";
+  if (formulaProp.type === "date") return extractDate(formulaProp.date);
+  if (formulaProp.type === "string" && formulaProp.string) {
+    const m = String(formulaProp.string).match(/\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : "";
+  }
+  return "";
+}
+
+// The Notion DB has no single "Release Date" property. Prefer the approved date
+// when set, fall back to the estimated date, then the legacy property name.
+function extractReleaseDate(props: any): string {
+  return (
+    extractFormulaDate(props["Approved Release Date"]?.formula) ||
+    extractDate(props["Estimated Release Date"]?.date) ||
+    extractDate(props["Release Date"]?.date)
+  );
+}
+
 function extractSelectValue(selectProp: any): string {
   if (!selectProp || !selectProp.name) return "";
   return selectProp.name;
@@ -65,7 +87,7 @@ function mapNotionPage(page: any): NotionRelease | null {
   const props = page.properties;
 
   const name = extractPlainText(props["Release Name"]?.title || []);
-  const dateRaw = extractDate(props["Release Date"]?.date);
+  const dateRaw = extractReleaseDate(props);
 
   if (!name) return null;
 
@@ -173,7 +195,7 @@ export async function createNotionRelease(input: CreateNotionReleaseInput): Prom
     "Release Name": {
       title: [{ text: { content: input.name } }],
     },
-    ...(input.date ? { "Release Date": { date: { start: input.date } } } : {}),
+    ...(input.date ? { "Estimated Release Date": { date: { start: input.date } } } : {}),
   };
 
   if (input.categories && input.categories.length > 0) {
@@ -310,9 +332,9 @@ export async function updateNotionRelease(pageId: string, input: Partial<CreateN
 
   if (input.date !== undefined) {
     if (input.date) {
-      properties["Release Date"] = { date: { start: input.date } };
+      properties["Estimated Release Date"] = { date: { start: input.date } };
     } else {
-      properties["Release Date"] = { date: null };
+      properties["Estimated Release Date"] = { date: null };
     }
   }
 
