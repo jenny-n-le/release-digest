@@ -88,6 +88,15 @@ export default function WeeklyDigest() {
     };
   }, [allReleases, startDate, endDate, selectedProducts, statusFilter, tierFilters]);
 
+  // Derived from the data so products added or renamed in Notion stay filterable.
+  const availableProducts = useMemo(() => {
+    const set = new Set<string>();
+    (allReleases ?? []).forEach(r => {
+      r.product.split(", ").filter(Boolean).forEach(p => set.add(p));
+    });
+    return Array.from(set).sort();
+  }, [allReleases]);
+
   const groupedRecent = useMemo(() => groupReleasesByProduct(recentlyReleased), [recentlyReleased]);
   const groupedComingSoon = useMemo(() => groupReleasesByProduct(comingSoon), [comingSoon]);
 
@@ -140,6 +149,7 @@ export default function WeeklyDigest() {
           <ProductFilter
             selectedProducts={selectedProducts}
             onSelectionChange={setSelectedProducts}
+            availableProducts={availableProducts}
           />
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>

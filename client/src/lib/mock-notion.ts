@@ -76,17 +76,30 @@ export function sortComingSoon(releases: Release[]): Release[] {
   });
 }
 
+// Must track the "Product" multi-select options in Notion. Anything not listed
+// here still renders — it just sorts after the known products.
 const PRODUCT_ORDER = [
   "Hiring",
+  "Talent Network",
   "HRIS",
+  "Documents",
+  "PTO",
   "Time & Scheduling",
   "Payroll",
+  "Ben Admin",
   "Benefits",
   "Mobile Worker App",
+  "Mobile",
+  "Chat",
+  "Voice AI",
+  "AI Assistant",
+  "Task & Manager Logbook",
+  "Manager Logbook",
+  "Tip Management",
+  "POS Integrations",
+  "Integrations",
   "Platform",
-  "Tip Management (Beta)",
-  "Compliance Shield (Beta)",
-  "Manager Logbook (Beta)",
+  "Workstream",
 ];
 
 const TIER_PRIORITY: Record<string, number> = {

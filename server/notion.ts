@@ -31,6 +31,37 @@ function extractPlainText(richText: any[]): string {
   return richText.map((t: any) => t.plain_text || "").join("");
 }
 
+// Look up a property by any of several names, matching case-insensitively so a
+// casing tweak in Notion ("Pre-read" vs "Pre-Read") doesn't break the mapping.
+function findProp(props: any, names: string[], expectedType?: string): any {
+  const keys = Object.keys(props || {});
+  for (const name of names) {
+    const key = keys.find((k) => k.toLowerCase() === name.toLowerCase());
+    if (!key) continue;
+    if (expectedType && props[key]?.type !== expectedType) continue;
+    return props[key];
+  }
+  return undefined;
+}
+
+// The title column has been renamed in Notion before (it currently reports as
+// "Pre-Read Material"). A database has exactly one title property, so find it by
+// type instead of by name — that survives any future rename.
+function extractTitle(props: any): string {
+  const named = findProp(props, ["Release Name", "Name"], "title");
+  if (named) {
+    const text = extractPlainText(named.title || []);
+    if (text) return text;
+  }
+  for (const key of Object.keys(props || {})) {
+    if (props[key]?.type === "title") {
+      const text = extractPlainText(props[key].title || []);
+      if (text) return text;
+    }
+  }
+  return "";
+}
+
 function extractDate(dateProp: any): string {
   if (!dateProp || !dateProp.start) return "";
   return dateProp.start;
@@ -52,9 +83,10 @@ function extractFormulaDate(formulaProp: any): string {
 // when set, fall back to the estimated date, then the legacy property name.
 function extractReleaseDate(props: any): string {
   return (
-    extractFormulaDate(props["Approved Release Date"]?.formula) ||
-    extractDate(props["Estimated Release Date"]?.date) ||
-    extractDate(props["Release Date"]?.date)
+    extractFormulaDate(findProp(props, ["Approved Release Date"])?.formula) ||
+    extractDate(findProp(props, ["Approved Release Date"], "date")?.date) ||
+    extractDate(findProp(props, ["Estimated Release Date"], "date")?.date) ||
+    extractDate(findProp(props, ["Release Date"], "date")?.date)
   );
 }
 
@@ -86,28 +118,38 @@ function extractUrl(urlProp: any): string {
 function mapNotionPage(page: any): NotionRelease | null {
   const props = page.properties;
 
-  const name = extractPlainText(props["Release Name"]?.title || []);
+  const name = extractTitle(props);
   const dateRaw = extractReleaseDate(props);
 
   if (!name) return null;
 
-  const categories = extractMultiSelectValues(props["Product"]?.multi_select || []);
+  const productProp = findProp(props, ["Product", "Products"], "multi_select");
+  const categories = extractMultiSelectValues(productProp?.multi_select || []);
   const category = categories.length > 0 ? categories[0] : "";
 
-  const statusRaw = extractSelectValue(props["Release Status"]?.select) ||
-                    extractStatusValue(props["Release Status"]?.status);
+  const statusProp = findProp(props, ["Release Status", "Status"]);
+  const statusRaw = extractSelectValue(statusProp?.select) ||
+                    extractStatusValue(statusProp?.status);
 
-  const tierRaw = extractSelectValue(props["Release Tier"]?.select);
+  const tierProp = findProp(props, ["Release Tier", "Tier"]);
+  const tierRaw = extractSelectValue(tierProp?.select) ||
+                  extractStatusValue(tierProp?.status);
 
-  const owner = extractSelectValue(props["Owner of Feature"]?.select) ||
-                extractPeopleNames(props["Owner of Feature"]?.people || []);
+  const ownerProp = findProp(props, ["Owner of Feature", "KB Owner", "Owner"]);
+  const owner = extractSelectValue(ownerProp?.select) ||
+                extractPeopleNames(ownerProp?.people || []);
 
-  const knowledgeArticleUrl = extractPlainText(props["Knowledge Article Link"]?.rich_text || []) ||
-                              extractUrl(props["Knowledge Article Link"]?.url);
+  const kbProp = findProp(props, ["Knowledge Article Link", "Knowledge Article"]);
+  const knowledgeArticleUrl = extractPlainText(kbProp?.rich_text || []) ||
+                              extractUrl(kbProp?.url);
 
-  const briefDescription = extractPlainText(props["Brief Description"]?.rich_text || []);
+  const briefDescription = extractPlainText(
+    findProp(props, ["Brief Description", "Description"], "rich_text")?.rich_text || []
+  );
 
-  const whyItMatters = extractPlainText(props["Why It Matters"]?.rich_text || []);
+  const whyItMatters = extractPlainText(
+    findProp(props, ["Why It Matters"], "rich_text")?.rich_text || []
+  );
 
   const detailedOverview = "";
 

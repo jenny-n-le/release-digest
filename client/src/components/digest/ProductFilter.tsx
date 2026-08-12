@@ -5,42 +5,45 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ChevronDown, Search } from "lucide-react";
 
-const ALL_PRODUCTS = [
+// Fallback only — the real list is derived from the Notion data via the
+// `availableProducts` prop so renamed/added products stay filterable.
+const FALLBACK_PRODUCTS = [
   "Hiring",
   "HRIS",
   "Time & Scheduling",
   "Payroll",
-  "Benefits",
-  "Mobile Worker App",
   "Platform",
-  "Tip Management (Beta)",
-  "Compliance Shield (Beta)",
-  "Manager Logbook (Beta)",
 ];
 
 interface ProductFilterProps {
   selectedProducts: string[];
   onSelectionChange: (products: string[]) => void;
+  availableProducts?: string[];
 }
 
-function getDisplayLabel(selected: string[]): string {
-  if (selected.length === 0 || selected.length === ALL_PRODUCTS.length) return "All Products";
+function getDisplayLabel(selected: string[], total: number): string {
+  if (selected.length === 0 || selected.length === total) return "All Products";
   if (selected.includes("__none__")) return "No Products";
   if (selected.length === 1) return selected[0];
   if (selected.length === 2) return `${selected[0]} + 1`;
   return `${selected.length} products`;
 }
 
-export function ProductFilter({ selectedProducts, onSelectionChange }: ProductFilterProps) {
+export function ProductFilter({ selectedProducts, onSelectionChange, availableProducts }: ProductFilterProps) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+
+  const ALL_PRODUCTS = useMemo(
+    () => (availableProducts && availableProducts.length > 0 ? availableProducts : FALLBACK_PRODUCTS),
+    [availableProducts]
+  );
 
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return ALL_PRODUCTS;
     return ALL_PRODUCTS.filter((p) =>
       p.toLowerCase().includes(search.toLowerCase())
     );
-  }, [search]);
+  }, [search, ALL_PRODUCTS]);
 
   const toggleProduct = (product: string) => {
     if (selectedProducts.includes(product)) {
@@ -104,7 +107,7 @@ export function ProductFilter({ selectedProducts, onSelectionChange }: ProductFi
           className="w-[180px] justify-between text-sm font-normal"
           data-testid="product-filter"
         >
-          <span className="truncate">{getDisplayLabel(selectedProducts)}</span>
+          <span className="truncate">{getDisplayLabel(selectedProducts, ALL_PRODUCTS.length)}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
