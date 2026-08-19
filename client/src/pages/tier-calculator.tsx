@@ -27,7 +27,7 @@ const TIER_RESULTS: Record<string, TierResult> = {
   "Tier 0": {
     tier: "Tier 0",
     label: "New Product",
-    supportedBy: "Jenny",
+    supportedBy: "Joelle or Jenny",
     description: "Net new product or monetizable capability still in Beta.",
     examples: ["VideoAI Beta", "Compliance Shield Beta", "Tip Management Beta", "Manager Logbook Beta"],
     color: "text-red-700",
@@ -47,7 +47,7 @@ const TIER_RESULTS: Record<string, TierResult> = {
   "Tier 2": {
     tier: "Tier 2",
     label: "Medium Release",
-    supportedBy: "Jenny",
+    supportedBy: "Joelle or Jenny",
     description: "Involves major UI changes, requires changes in sales demo talk track, may require GTM enablement.",
     examples: ["Mobile v3", "Shared Time Clock", "Checkeeper Integration"],
     color: "text-blue-700",
@@ -57,8 +57,8 @@ const TIER_RESULTS: Record<string, TierResult> = {
   "Tier 3": {
     tier: "Tier 3",
     label: "Small Release",
-    supportedBy: "RJ / KM team",
-    description: "Requires in-app tooltips, pop-ups, or banners.",
+    supportedBy: "Aaron / Enablement Team",
+    description: "Requires in-app tooltips, pop-ups, banners, or customer comms.",
     examples: ["Bulk import team members on HR", "Export PDF of Schedule", "VoiceAI Recording Replay"],
     color: "text-slate-700",
     bgColor: "bg-slate-50",
@@ -81,12 +81,17 @@ interface ComputeResult {
   decidedAfter: "q1" | "q2" | "q3" | "q4" | "q5";
 }
 
+function countYes(answers: Answer[]): number {
+  return answers.filter((a) => a === "yes").length;
+}
+
 function computeTier(answers: {
   q1: Answer;
   q2: Answer;
   q3a: Answer;
   q3b: Answer;
   q3c: Answer;
+  q3d: Answer;
   q4: Answer;
   q5: Answer;
 }): ComputeResult | null {
@@ -96,15 +101,17 @@ function computeTier(answers: {
   if (answers.q2 === "yes") return { tier: TIER_RESULTS["Tier 1"], decidedAfter: "q2" };
   if (answers.q2 !== "no") return null;
 
-  if (answers.q3a === "yes" && answers.q3b === "yes" && answers.q3c === "yes") {
-    return { tier: TIER_RESULTS["Tier 1"], decidedAfter: "q3" };
-  }
-
-  const q3Answered = answers.q3a !== null && answers.q3b !== null && answers.q3c !== null;
+  // Q3 is scored by how many of a-d are "yes", so every part must be answered
+  // before the section can resolve.
+  const q3Answered =
+    answers.q3a !== null && answers.q3b !== null && answers.q3c !== null && answers.q3d !== null;
   if (!q3Answered) return null;
 
-  const anyQ3No = answers.q3a === "no" || answers.q3b === "no" || answers.q3c === "no";
-  if (!anyQ3No) return null;
+  const q3YesCount = countYes([answers.q3a, answers.q3b, answers.q3c, answers.q3d]);
+  if (q3YesCount === 4) return { tier: TIER_RESULTS["Tier 1"], decidedAfter: "q3" };
+  if (q3YesCount === 3) return { tier: TIER_RESULTS["Tier 2"], decidedAfter: "q3" };
+  if (q3YesCount === 2) return { tier: TIER_RESULTS["Tier 3"], decidedAfter: "q3" };
+  // 0 or 1 yes: not significant enough to tier here, continue to the next question.
 
   if (answers.q4 === "yes") return { tier: TIER_RESULTS["Tier 2"], decidedAfter: "q4" };
   if (answers.q4 !== "no") return null;
@@ -212,20 +219,21 @@ export default function TierCalculator() {
   const [q3a, setQ3a] = useState<Answer>(null);
   const [q3b, setQ3b] = useState<Answer>(null);
   const [q3c, setQ3c] = useState<Answer>(null);
+  const [q3d, setQ3d] = useState<Answer>(null);
   const [q4, setQ4] = useState<Answer>(null);
   const [q5, setQ5] = useState<Answer>(null);
 
   const result = useMemo(
-    () => computeTier({ q1, q2, q3a, q3b, q3c, q4, q5 }),
-    [q1, q2, q3a, q3b, q3c, q4, q5]
+    () => computeTier({ q1, q2, q3a, q3b, q3c, q3d, q4, q5 }),
+    [q1, q2, q3a, q3b, q3c, q3d, q4, q5]
   );
 
   const isQ2Active = q1 === "no";
   const isQ3Active = q1 === "no" && q2 === "no";
-  const q3AllYes = q3a === "yes" && q3b === "yes" && q3c === "yes";
-  const q3AnyNo = q3a === "no" || q3b === "no" || q3c === "no";
-  const q3AllAnswered = q3a !== null && q3b !== null && q3c !== null;
-  const isQ4Active = isQ3Active && q3AllAnswered && q3AnyNo;
+  const q3AllAnswered = q3a !== null && q3b !== null && q3c !== null && q3d !== null;
+  const q3YesCount = countYes([q3a, q3b, q3c, q3d]);
+  // 2+ yes resolves to a tier here, so Q4 only opens at 0 or 1 yes.
+  const isQ4Active = isQ3Active && q3AllAnswered && q3YesCount < 2;
   const isQ5Active = isQ4Active && q4 === "no";
 
   const handleReset = () => {
@@ -234,6 +242,7 @@ export default function TierCalculator() {
     setQ3a(null);
     setQ3b(null);
     setQ3c(null);
+    setQ3d(null);
     setQ4(null);
     setQ5(null);
   };
@@ -351,17 +360,39 @@ export default function TierCalculator() {
                       </p>
                       <YesNoToggle value={q3c} onChange={setQ3c} disabled={!isQ3Active} />
                     </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="text-sm text-muted-foreground">
+                        d. Change customer behavior?
+                      </p>
+                      <YesNoToggle value={q3d} onChange={setQ3d} disabled={!isQ3Active} />
+                    </div>
                   </div>
 
-                  {isQ3Active && q3AllYes && (
+                  {isQ3Active && q3AllAnswered && q3YesCount === 4 && (
                     <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 px-3 py-1.5 rounded-md border border-orange-100">
                       <ArrowRight className="h-3.5 w-3.5" />
-                      <span className="font-semibold">Tier 1 Release (all criteria met)</span>
+                      <span className="font-semibold">Tier 1 Release (4 of 4 criteria met)</span>
                       <span className="text-orange-500">(Supported by Jonathan)</span>
                     </div>
                   )}
-                  {isQ3Active && q3AllAnswered && q3AnyNo && (
-                    <div className="text-xs text-muted-foreground italic">Not all criteria met — continue to next question...</div>
+                  {isQ3Active && q3AllAnswered && q3YesCount === 3 && (
+                    <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100">
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      <span className="font-semibold">Tier 2 Release (3 of 4 criteria met)</span>
+                      <span className="text-blue-500">(Supported by Joelle or Jenny)</span>
+                    </div>
+                  )}
+                  {isQ3Active && q3AllAnswered && q3YesCount === 2 && (
+                    <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      <span className="font-semibold">Tier 3 Release (2 of 4 criteria met)</span>
+                      <span className="text-slate-500">(Supported by Aaron / Enablement Team)</span>
+                    </div>
+                  )}
+                  {isQ3Active && q3AllAnswered && q3YesCount < 2 && (
+                    <div className="text-xs text-muted-foreground italic">
+                      {q3YesCount} of 4 criteria met — continue to next question...
+                    </div>
                   )}
                 </div>
               </div>
@@ -391,7 +422,7 @@ export default function TierCalculator() {
                     <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-100">
                       <ArrowRight className="h-3.5 w-3.5" />
                       <span className="font-semibold">Tier 2 Release</span>
-                      <span className="text-blue-500">(Supported by Jenny)</span>
+                      <span className="text-blue-500">(Supported by Joelle or Jenny)</span>
                     </div>
                   )}
                   {isQ4Active && q4 === "no" && (
@@ -413,7 +444,7 @@ export default function TierCalculator() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-medium text-sm">
-                        Does this release require in-app tooltips, pop-ups, or banners?
+                        Does this release require in-app tooltips, pop-ups, banners, or customer comms?
                       </p>
                     </div>
                     <YesNoToggle value={q5} onChange={setQ5} disabled={!isQ5Active} />
@@ -422,7 +453,7 @@ export default function TierCalculator() {
                     <div className="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
                       <ArrowRight className="h-3.5 w-3.5" />
                       <span className="font-semibold">Tier 3 Release</span>
-                      <span className="text-slate-500">(Supported by RJ / KM team)</span>
+                      <span className="text-slate-500">(Supported by Aaron / Enablement Team)</span>
                     </div>
                   )}
                   {isQ5Active && q5 === "no" && (
