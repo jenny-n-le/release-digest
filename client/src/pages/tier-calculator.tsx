@@ -311,7 +311,7 @@ export default function TierCalculator() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-medium text-sm">
-                        Does this release impact taxes, deductions, or compliance reporting?
+                        Does this release impact security, taxes, deductions, or compliance reporting?
                       </p>
                     </div>
                     <YesNoToggle value={q2} onChange={setQ2} disabled={!isQ2Active} />
